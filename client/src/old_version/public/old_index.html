@@ -1,0 +1,1436 @@
+<!DOCTYPE html>
+<html>
+
+
+<head>
+    <meta charset="UTF8">
+    <title>Territorial Apex indicators </title>
+
+
+    <!-- <link rel="stylesheet" type="text/css" href="style.css"> -->
+
+    <!-- Leaflet's CSS file -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
+        integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
+        crossorigin="" />
+
+
+
+    <style>
+        div.scrollmenu {
+            background-color: #333;
+            overflow: auto;
+            white-space: nowrap;
+        }
+
+
+        .tablink {
+            display: inline-block;
+            background-color: #555;
+            color: white;
+            border: none;
+            outline: none;
+            padding: 8px;
+            font-size: 17px;
+        }
+
+        .tablink:hover {
+            background-color: #777;
+        }
+    </style>
+
+
+
+
+
+
+    <!-- Leaflet's JavaScript File -->
+    <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"
+        integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew=="
+        crossorigin="">
+        </script>
+
+    <!-- https://cdn.jsdelivr.net/npm/chart.js@2.8.0 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.3/dist/Chart.min.js"></script>
+
+    <script src="utils.js"></script>
+    <script src="snippet.js"></script>
+
+    <script src="https://unpkg.com/vue/dist/vue.js"></script>
+
+    <script src="https://kit.fontawesome.com/a076d05399.js"></script>
+
+    
+
+</head>
+
+<body style=" color:#000!important; background-color:#f1f1f1!important;">
+    <div>
+        
+        <div id="uName" style="position: absolute;  width: 15%;  height:40px;">
+            {{usrName}}
+        </div>
+        
+        <div id="campagneId" style="position: absolute; left: 10%; width: 15%;  height:40px;">
+            Année: <select id="selectCampagneId"></select>
+        </div>
+
+        
+
+        <div id="yearSelector" style="position: absolute; left: 25%; width: 25%;  height:40px;">
+            
+        </div>
+
+        <div id="prevYear" style="position: absolute;  left: 50%;  width: 25%;  height:40px;">
+            <button class="tablink" id="button_showPrevYear" onmouseover="showPrevYearSelectedParcelMarkers()" onmouseout="reInitSelectedParcelMarkers()"><i class='far fa-eye'></i> année préc. </button>
+        </div>
+
+        <div>
+            <div style="position: absolute;  top: 40px; width: 40px; height:40px;">
+                <button class="tablink" onclick="scrollToRight()"> < </button> 
+            </div> 
+            
+            <div id="menu3" class="scrollmenu"
+                        style="position: absolute; top:40px; width: 205px; left: 40px; height:40px;">
+            </div>
+
+            <div style="position: absolute; top:40px; width: 40px; left: 250px; height:40px;">
+                <button class="tablink" onclick="scrollToLeft()"> > </button>
+            </div>
+
+
+        </div>
+
+        <!--  Initialize and the map qnd set its views to the chosen geographical coordinates with a zoom level -->
+        <div id="mapid" style="position: absolute; width: 70%; top: 80px; height: 80%;  "></div>
+
+    </div>
+
+    <div id="indicatorsId" style="position: absolute;  width: 25%; left:71%; padding: 10px;">
+        Croissance de la parcelle sélectionnée 
+        <div id="pie-chart_parcel-growth" style="height: 80px ">
+            <canvas id="pie-chart_parcel-growth-indicators"></canvas>
+        </div>
+        <hr>
+        <span id="growthDynamicMsg"></span>
+        <hr>
+        Suivi de la croissance
+        <div id="line-chart_parcel-growth" style="height: 200px; top: 90px">
+            <canvas id="line-chart_parcel-growth-indicators_vs_time"></canvas>
+        </div>
+        <hr>
+        Interprétation contrainte hydrique
+        <div id="line-chart_parcel-hydric-constraint" style="height: 100px; top: 290px">
+            <canvas id="line-chart_parcel-hydric-constraint-indicators_vs_time"></canvas>
+        </div>
+    </div>
+
+    <script>
+
+
+        /*
+        TODO
+        
+        - donner  + d importance à la carte
+        - affichage resultat sur  div de  droite reduire taille 
+        - indice de croissance entre (0 et 1)
+        - choisir couleur en fonction indice de croissance () -> 5 classe de vert claire à vert fonce
+        
+        - TODO Bouton comqpraison de campagne
+        
+        - indice de croissance en fonction des dates
+        - contraintes hydriaues
+        
+        - DatePype
+        
+        - Afficher Observations Partagees
+
+        
+        -Export
+
+
+        TODO
+
+        - page d'accueil (photo et logos)
+
+        - lien avec base de donnees ( P 1)
+
+        - Identification (P 2)
+
+        - bouton fiche parcelle
+            - 3 plot basics
+            - table de modification Nb Croiss plein,  modere
+
+        - Page Export (P 3)
+            - cf Trello
+
+        
+        - info partagees
+        
+
+        Back end
+        - connexions
+        - back end
+
+        */
+
+
+
+        // NEW WEEK SELETCTOR ON PROGRESS
+
+        
+        
+
+
+
+
+
+        
+
+        // campIdx_semIdx_parclIdx_obsIdx
+        var campIdx_semIdx_parclIdx_obsIdx =
+            [
+                [ // campIdx :0 
+
+                    [ // semIdx : 0
+
+                        [ // parclIdx : 0 
+                            // obsIdx : 0  , 
+                            { id: 1, parcelle: 0, latlng: { lat: 52.506237, lng: -0.118102 }, niveau: 0, date: "2018-03-01", campIdx: 0, semIdx: 0, parclIdx: 0, obsIdx: 0 }
+                            // obsIdx : 1
+                            , { id: 2, parcelle: 0, latlng: { lat: 52.507602, lng: -0.119928 }, niveau: 1, date: "2019-03-01", campIdx: 0, semIdx: 0, parclIdx: 0, obsIdx: 1 }
+                            // obsIdx : 2
+                            , { id: 3, parcelle: 0, latlng: { lat: 52.507243, lng: -0.116541 }, niveau: 2, date: "2019-03-01", campIdx: 0, semIdx: 0, parclIdx: 0, obsIdx: 2 }
+                        ]
+
+
+
+                        , [ // parclIdx : 1 
+                            // obsIdx : 0 
+                            { id: 4, parcelle: 1, latlng: { lat: 52.51705, lng: -0.10362 }, niveau: 2, date: "2018-03-01", campIdx: 0, semIdx: 0, parclIdx: 1, obsIdx: 0 }
+                            // obsIdx : 1  
+                            , { id: 5, parcelle: 1, latlng: { lat: 52.515907, lng: -0.101341 }, niveau: 2, date: "2018-03-01", campIdx: 0, semIdx: 0, parclIdx: 1, obsIdx: 1 }
+                            // obsIdx : 2
+                            , { id: 6, parcelle: 1, latlng: { lat: 52.515353, lng: -0.103081 }, niveau: 2, date: "2019-03-01", campIdx: 0, semIdx: 0, parclIdx: 1, obsIdx: 2 }
+                        ]
+
+                        , [ // parclIdx : 2 
+                            // obsIdx : 0 
+                            { id: 7, parcelle: 2, latlng: { lat: 52.506335, lng: -0.089603 }, niveau: 0, date: "2018-03-01", campIdx: 0, semIdx: 0, parclIdx: 2, obsIdx: 0 }
+                            // obsIdx : 1  
+                            , { id: 8, parcelle: 2, latlng: { lat: 52.504924, lng: -0.089465 }, niveau: 0, date: "2018-03-01", campIdx: 0, semIdx: 0, parclIdx: 2, obsIdx: 1 }
+                            // obsIdx : 2
+                            , { id: 9, parcelle: 2, latlng: { lat: 52.505355, lng: -0.087627 }, niveau: 0, date: "2018-03-01", campIdx: 0, semIdx: 0, parclIdx: 2, obsIdx: 2 }
+                        ]
+
+                    ]
+
+                    , [ // semIdx : 1
+
+                        [ // parcIdx : 0 
+                            // obsIdx : 0  , 
+                            { id: 1, parcelle: 0, latlng: { lat: 52.506237, lng: -0.118102 }, niveau: 1, date: "2018-03-08", campIdx: 0, semIdx: 1, parclIdx: 0, obsIdx: 0 }
+                            // obsIdx : 1
+                            , { id: 2, parcelle: 0, latlng: { lat: 52.507602, lng: -0.119928 }, niveau: 2, date: "2018-03-08", campIdx: 0, semIdx: 1, parclIdx: 0, obsIdx: 1 }
+                            // obsIdx : 2
+                            , { id: 3, parcelle: 0, latlng: { lat: 52.507243, lng: -0.116541 }, niveau: 2, date: "2018-03-08", campIdx: 0, semIdx: 1, parclIdx: 0, obsIdx: 2 }
+                        ]
+
+
+
+                        , [ // parcIdx : 1 
+                            // obsIdx : 0 
+                            { id: 4, parcelle: 1, latlng: { lat: 52.51705, lng: -0.10362 }, niveau: 1, date: "2018-03-08", campIdx: 0, semIdx: 1, parclIdx: 1, obsIdx: 0 }
+                            // obsIdx : 1  
+                            , { id: 5, parcelle: 1, latlng: { lat: 52.515907, lng: -0.101341 }, niveau: 1, date: "2018-03-08", campIdx: 0, semIdx: 1, parclIdx: 1, obsIdx: 1 }
+                            // obsIdx : 2
+                            , { id: 6, parcelle: 1, latlng: { lat: 52.515353, lng: -0.103081 }, niveau: 1, date: "2018-03-08", campIdx: 0, semIdx: 1, parclIdx: 1, obsIdx: 2 }
+                        ]
+
+                        , [ // parcIdx : 2 
+                            // obsIdx : 0 
+                            { id: 7, parcelle: 2, latlng: { lat: 52.506335, lng: -0.089603 }, niveau: 0, date: "2018-03-08", campIdx: 0, semIdx: 1, parclIdx: 2, obsIdx: 0 }
+                            // obsIdx : 1  
+                            , { id: 8, parcelle: 2, latlng: { lat: 52.504924, lng: -0.089465 }, niveau: 1, date: "2018-03-08", campIdx: 0, semIdx: 1, parclIdx: 2, obsIdx: 1 }
+                            // obsIdx : 2
+                            , { id: 9, parcelle: 2, latlng: { lat: 52.505355, lng: -0.087627 }, niveau: 1, date: "2018-03-08", campIdx: 0, semIdx: 1, parclIdx: 2, obsIdx: 2 }
+                        ]
+
+                    ]
+
+                    , [ // semIdx : 2
+
+                        [ // parcIdx : 0 
+                            // obsIdx : 0  , 
+                            { id: 1, parcelle: 0, latlng: { lat: 52.506237, lng: -0.118102 }, niveau: 1, date: "2018-03-15", campIdx: 0, semIdx: 2, parclIdx: 0, obsIdx: 0 }
+                            // obsIdx : 1
+                            , { id: 2, parcelle: 0, latlng: { lat: 52.507602, lng: -0.119928 }, niveau: 1, date: "2018-03-15", campIdx: 0, semIdx: 2, parclIdx: 0, obsIdx: 1 }
+                            // obsIdx : 2
+                            , { id: 3, parcelle: 0, latlng: { lat: 52.507243, lng: -0.116541 }, niveau: 1, date: "2018-03-15", campIdx: 0, semIdx: 2, parclIdx: 0, obsIdx: 2 }
+                        ]
+
+                        , [ // parcIdx : 1 
+                            // obsIdx : 0 
+                            { id: 4, parcelle: 1, latlng: { lat: 52.51705, lng: -0.10362 }, niveau: 2, date: "2018-03-15", campIdx: 0, semIdx: 2, parclIdx: 1, obsIdx: 0 }
+                            // obsIdx : 1  
+                            , { id: 5, parcelle: 1, latlng: { lat: 52.515907, lng: -0.101341 }, niveau: 2, date: "2018-03-15", campIdx: 0, semIdx: 2, parclIdx: 1, obsIdx: 1 }
+                            // obsIdx : 2
+                            , { id: 6, parcelle: 1, latlng: { lat: 52.515353, lng: -0.103081 }, niveau: 2, date: "2018-03-15", campIdx: 0, semIdx: 2, parclIdx: 1, obsIdx: 2 }
+                        ]
+
+                        , [ // parcIdx : 2 
+                            // obsIdx : 0 
+                            { id: 7, parcelle: 2, latlng: { lat: 52.506335, lng: -0.089603 }, niveau: 1, date: "2018-03-15", campIdx: 0, semIdx: 2, parclIdx: 2, obsIdx: 0 }
+                            // obsIdx : 1  
+                            , { id: 8, parcelle: 2, latlng: { lat: 52.504924, lng: -0.089465 }, niveau: 1, date: "2018-03-15", campIdx: 0, semIdx: 2, parclIdx: 2, obsIdx: 1 }
+                            // obsIdx : 2
+                            , { id: 9, parcelle: 2, latlng: { lat: 52.505355, lng: -0.087627 }, niveau: 1, date: "2018-03-15", campIdx: 0, semIdx: 2, parclIdx: 2, obsIdx: 2 }
+                        ]
+
+                    ]
+
+                    , [ // semIdx : 3
+
+                        [ // parcIdx : 0
+
+                            // obsIdx : 0  , 
+                            { id: 1, parcelle: 0, latlng: { lat: 52.506237, lng: -0.118102 }, niveau: 0, date: "2018-03-21", campIdx: 0, semIdx: 3, parclIdx: 0, obsIdx: 0 }
+                            // obsIdx : 1
+                            , { id: 2, parcelle: 0, latlng: { lat: 52.507602, lng: -0.119928 }, niveau: 0, date: "2018-03-21", campIdx: 0, semIdx: 3, parclIdx: 0, obsIdx: 1 }
+                            // obsIdx : 2
+                            , { id: 3, parcelle: 0, latlng: { lat: 52.507243, lng: -0.116541 }, niveau: 0, date: "2018-03-21", campIdx: 0, semIdx: 3, parclIdx: 0, obsIdx: 2 }
+                        ]
+
+                        , [ // parcIdx : 1 
+                            // obsIdx : 0 
+                            { id: 4, parcelle: 1, latlng: { lat: 52.51705, lng: -0.10362 }, niveau: 1, date: "2018-03-21", campIdx: 0, semIdx: 3, parclIdx: 1, obsIdx: 0 }
+                            // obsIdx : 1  
+                            , { id: 5, parcelle: 1, latlng: { lat: 52.515907, lng: -0.101341 }, niveau: 2, date: "2018-03-21", campIdx: 0, semIdx: 3, parclIdx: 1, obsIdx: 1 }
+                            // obsIdx : 2
+                            , { id: 6, parcelle: 1, latlng: { lat: 52.515353, lng: -0.103081 }, niveau: 3, date: "2018-03-21", campIdx: 0, semIdx: 3, parclIdx: 1, obsIdx: 2 }
+                        ]
+
+                        , [ // parcIdx : 2 
+                            // obsIdx : 0 
+                            { id: 7, parcelle: 2, latlng: { lat: 52.506335, lng: -0.089603 }, niveau: 1, date: "2018-03-21", campIdx: 0, semIdx: 3, parclIdx: 2, obsIdx: 0 }
+                            // obsIdx : 1  
+                            , { id: 8, parcelle: 2, latlng: { lat: 52.504924, lng: -0.089465 }, niveau: 2, date: "2018-03-21", campIdx: 0, semIdx: 3, parclIdx: 2, obsIdx: 1 }
+                            // obsIdx : 2
+                            , { id: 9, parcelle: 2, latlng: { lat: 52.505355, lng: -0.087627 }, niveau: 0, date: "2018-03-21", campIdx: 0, semIdx: 3, parclIdx: 2, obsIdx: 2 }
+                        ]
+
+                    ]
+
+                ]
+
+                , [ // campIdx :1 
+
+                    [ // semIdx : 0
+
+                        [ // parcIdx : 0 
+                            // obsIdx : 0  , 
+                            { id: 1, parcelle: 0, latlng: { lat: 52.506237, lng: -0.118102 }, niveau: 0, date: "2019-03-01", campIdx: 1, semIdx: 0, parclIdx: 0, obsIdx: 0 }
+                            // obsIdx : 1
+                            , { id: 2, parcelle: 0, latlng: { lat: 52.507602, lng: -0.119928 }, niveau: 0, date: "2019-03-01", campIdx: 1, semIdx: 0, parclIdx: 0, obsIdx: 1 }
+                            // obsIdx : 2
+                            , { id: 3, parcelle: 0, latlng: { lat: 52.507243, lng: -0.116541 }, niveau: 0, date: "2019-03-01", campIdx: 1, semIdx: 0, parclIdx: 0, obsIdx: 2 }
+                        ]
+
+
+
+                        , [ // parcIdx : 1 
+                            // obsIdx : 0 
+                            { id: 4, parcelle: 1, latlng: { lat: 52.51705, lng: -0.10362 }, niveau: 0, date: "2019-03-01", campIdx: 1, semIdx: 0, parclIdx: 1, obsIdx: 0 }
+                            // obsIdx : 1  
+                            , { id: 5, parcelle: 1, latlng: { lat: 52.515907, lng: -0.101341 }, niveau: 1, date: "2019-03-01", campIdx: 1, semIdx: 0, parclIdx: 1, obsIdx: 1 }
+                            // obsIdx : 2
+                            , { id: 6, parcelle: 1, latlng: { lat: 52.515353, lng: -0.103081 }, niveau: 2, date: "2019-03-01", campIdx: 1, semIdx: 0, parclIdx: 1, obsIdx: 2 }
+                        ]
+
+                        , [ // parcIdx : 2 
+                            // obsIdx : 0 
+                            { id: 7, parcelle: 2, latlng: { lat: 52.506335, lng: -0.089603 }, niveau: 0, date: "2019-03-01", campIdx: 1, semIdx: 0, parclIdx: 2, obsIdx: 0 }
+                            // obsIdx : 1  
+                            , { id: 8, parcelle: 2, latlng: { lat: 52.504924, lng: -0.089465 }, niveau: 1, date: "2019-03-01", campIdx: 1, semIdx: 0, parclIdx: 2, obsIdx: 1 }
+                            // obsIdx : 2
+                            , { id: 9, parcelle: 2, latlng: { lat: 52.505355, lng: -0.087627 }, niveau: 2, date: "2019-03-01", campIdx: 1, semIdx: 0, parclIdx: 2, obsIdx: 2 }
+                        ]
+
+                    ]
+
+                    , [ // semIdx : 1
+
+                        [ // parcIdx : 0 
+                            // obsIdx : 0  , 
+                            { id: 1, parcelle: 0, latlng: { lat: 52.506237, lng: -0.118102 }, niveau: 1, date: "2019-03-08", campIdx: 1, semIdx: 1, parclIdx: 0, obsIdx: 0 }
+                            // obsIdx : 1
+                            , { id: 2, parcelle: 0, latlng: { lat: 52.507602, lng: -0.119928 }, niveau: 2, date: "2019-03-08", campIdx: 1, semIdx: 1, parclIdx: 0, obsIdx: 1 }
+                            // obsIdx : 2
+                            , { id: 3, parcelle: 0, latlng: { lat: 52.507243, lng: -0.116541 }, niveau: 2, date: "2019-03-08", campIdx: 1, semIdx: 1, parclIdx: 0, obsIdx: 2 }
+                        ]
+
+
+
+                        , [ // parcIdx : 1 
+                            // obsIdx : 0 
+                            { id: 4, parcelle: 1, latlng: { lat: 52.51705, lng: -0.10362 }, niveau: 1, date: "2019-03-08", campIdx: 1, semIdx: 1, parclIdx: 1, obsIdx: 0 }
+                            // obsIdx : 1  
+                            , { id: 5, parcelle: 1, latlng: { lat: 52.515907, lng: -0.101341 }, niveau: 1, date: "2019-03-08", campIdx: 1, semIdx: 1, parclIdx: 1, obsIdx: 1 }
+                            // obsIdx : 2
+                            , { id: 6, parcelle: 1, latlng: { lat: 52.515353, lng: -0.103081 }, niveau: 1, date: "2019-03-08", campIdx: 1, semIdx: 1, parclIdx: 1, obsIdx: 2 }
+                        ]
+
+                        , [ // parcIdx : 2 
+                            // obsIdx : 0 
+                            { id: 7, parcelle: 2, latlng: { lat: 52.506335, lng: -0.089603 }, niveau: 0, date: "2019-03-08", campIdx: 1, semIdx: 1, parclIdx: 2, obsIdx: 0 }
+                            // obsIdx : 1  
+                            , { id: 8, parcelle: 2, latlng: { lat: 52.504924, lng: -0.089465 }, niveau: 1, date: "2019-03-08", campIdx: 1, semIdx: 1, parclIdx: 2, obsIdx: 1 }
+                            // obsIdx : 2
+                            , { id: 9, parcelle: 2, latlng: { lat: 52.505355, lng: -0.087627 }, niveau: 1, date: "2019-03-08", campIdx: 1, semIdx: 1, parclIdx: 2, obsIdx: 2 }
+                        ]
+
+                    ]
+
+                    , [ // semIdx : 2
+
+                        [ // parcIdx : 0 
+                            // obsIdx : 0  , 
+                            { id: 1, parcelle: 0, latlng: { lat: 52.506237, lng: -0.118102 }, niveau: 1, date: "2019-03-15", campIdx: 1, semIdx: 2, parclIdx: 0, obsIdx: 0 }
+                            // obsIdx : 1
+                            , { id: 2, parcelle: 0, latlng: { lat: 52.507602, lng: -0.119928 }, niveau: 1, date: "2019-03-15", campIdx: 1, semIdx: 2, parclIdx: 0, obsIdx: 1 }
+                            // obsIdx : 2
+                            , { id: 3, parcelle: 0, latlng: { lat: 52.507243, lng: -0.116541 }, niveau: 1, date: "2019-03-15", campIdx: 1, semIdx: 2, parclIdx: 0, obsIdx: 2 }
+                        ]
+
+                        , [ // parcIdx : 1 
+                            // obsIdx : 0 
+                            { id: 4, parcelle: 1, latlng: { lat: 52.51705, lng: -0.10362 }, niveau: 2, date: "2019-03-15", campIdx: 1, semIdx: 2, parclIdx: 1, obsIdx: 0 }
+                            // obsIdx : 1  
+                            , { id: 5, parcelle: 1, latlng: { lat: 52.515907, lng: -0.101341 }, niveau: 2, date: "2019-03-15", campIdx: 1, semIdx: 2, parclIdx: 1, obsIdx: 1 }
+                            // obsIdx : 2
+                            , { id: 6, parcelle: 1, latlng: { lat: 52.515353, lng: -0.103081 }, niveau: 2, date: "2019-03-15", campIdx: 1, semIdx: 2, parclIdx: 1, obsIdx: 2 }
+                        ]
+
+                        , [ // parcIdx : 2 
+                            // obsIdx : 0 
+                            { id: 7, parcelle: 2, latlng: { lat: 52.506335, lng: -0.089603 }, niveau: 1, date: "2019-03-15", campIdx: 1, semIdx: 2, parclIdx: 2, obsIdx: 0 }
+                            // obsIdx : 1  
+                            , { id: 8, parcelle: 2, latlng: { lat: 52.504924, lng: -0.089465 }, niveau: 1, date: "2019-03-15", campIdx: 1, semIdx: 2, parclIdx: 2, obsIdx: 1 }
+                            // obsIdx : 2
+                            , { id: 9, parcelle: 2, latlng: { lat: 52.505355, lng: -0.087627 }, niveau: 1, date: "2019-03-15", campIdx: 1, semIdx: 2, parclIdx: 2, obsIdx: 2 }
+                        ]
+
+                    ]
+
+                    , [ // semIdx : 3
+
+                        [ // parcIdx : 3
+
+                            // obsIdx : 0  , 
+                            { id: 1, parcelle: 0, latlng: { lat: 52.506237, lng: -0.118102 }, niveau: 0, date: "2019-03-21", campIdx: 1, semIdx: 3, parclIdx: 0, obsIdx: 0 }
+                            // obsIdx : 1
+                            , { id: 2, parcelle: 0, latlng: { lat: 52.507602, lng: -0.119928 }, niveau: 0, date: "2019-03-21", campIdx: 1, semIdx: 3, parclIdx: 0, obsIdx: 1 }
+                            // obsIdx : 2
+                            , { id: 3, parcelle: 0, latlng: { lat: 52.507243, lng: -0.116541 }, niveau: 0, date: "2019-03-21", campIdx: 1, semIdx: 3, parclIdx: 0, obsIdx: 2 }
+                        ]
+
+                        , [ // parcIdx : 1 
+                            // obsIdx : 0 
+                            { id: 4, parcelle: 1, latlng: { lat: 52.51705, lng: -0.10362 }, niveau: 1, date: "2019-03-21", campIdx: 1, semIdx: 3, parclIdx: 1, obsIdx: 0 }
+                            // obsIdx : 1  
+                            , { id: 5, parcelle: 1, latlng: { lat: 52.515907, lng: -0.101341 }, niveau: 2, date: "2019-03-21", campIdx: 1, semIdx: 3, parclIdx: 1, obsIdx: 1 }
+                            // obsIdx : 2
+                            , { id: 6, parcelle: 1, latlng: { lat: 52.515353, lng: -0.103081 }, niveau: 3, date: "2019-03-21", campIdx: 1, semIdx: 3, parclIdx: 1, obsIdx: 2 }
+                        ]
+
+                        , [ // parcIdx : 2 
+                            // obsIdx : 0 
+                            { id: 7, parcelle: 2, latlng: { lat: 52.506335, lng: -0.089603 }, niveau: 1, date: "2019-03-21", campIdx: 1, semIdx: 3, parclIdx: 2, obsIdx: 0 }
+                            // obsIdx : 1  
+                            , { id: 8, parcelle: 2, latlng: { lat: 52.504924, lng: -0.089465 }, niveau: 2, date: "2019-03-21", campIdx: 1, semIdx: 3, parclIdx: 2, obsIdx: 1 }
+                            // obsIdx : 2
+                            , { id: 9, parcelle: 2, latlng: { lat: 52.505355, lng: -0.087627 }, niveau: 0, date: "2019-03-21", campIdx: 1, semIdx: 3, parclIdx: 2, obsIdx: 2 }
+                        ]
+                    ]
+                ]
+
+            ];
+
+        var campagneYears = [2018, 2019];
+        var weekIds = [1, 2, 3, 4];
+        var weekDates = ["03-01", "03-08", "03-15", "03-21"]; // From one year to an other the start of the week may change for a given  month
+        var parcelIds = [1, 2, 3];
+
+
+        // Build centres of parcels
+        var glob_centr_lat = 0;
+        var glob_centr_lng = 0;
+        var campIdx_semIdx_parclIdx_cntr = [];
+        computeCentres();
+        
+
+        function computeCentres() {
+
+            var nbCamp = campIdx_semIdx_parclIdx_obsIdx.length;
+            for (var c = 0; c < nbCamp; c++) {
+
+                camp = [];
+
+                var nbSem = campIdx_semIdx_parclIdx_obsIdx[c].length;
+                for (var s = 0; s < nbSem; s++) {
+
+                    var sem = [];
+
+                    var nbParcl = campIdx_semIdx_parclIdx_obsIdx[c][s].length;
+                    for (var p = 0; p < nbParcl; p++) {
+
+                        var cntr_lat = 0;
+                        var cntr_lng = 0;
+                        var avg_niveau = 0;
+
+                        var nbObs = campIdx_semIdx_parclIdx_obsIdx[c][s][p].length;
+                        for (var o = 0; o < nbObs; o++) {
+
+                            cntr_lat += campIdx_semIdx_parclIdx_obsIdx[c][s][p][o].latlng.lat;
+                            cntr_lng += campIdx_semIdx_parclIdx_obsIdx[c][s][p][o].latlng.lng;
+                            avg_niveau += campIdx_semIdx_parclIdx_obsIdx[c][s][p][o].niveau;
+                        }
+                        var cntr = { parclIdx: p, latlng: { lat: -1, lng: -1 }, niveau: -1 };
+                        if (nbObs > 0) {
+                            cntr_lat = cntr_lat / nbObs;
+                            cntr_lng = cntr_lng / nbObs;
+                            avg_niveau = avg_niveau / nbObs;
+
+                            // console.log("cntr_lat: "+cntr_lat+ " cntr_lng: "+cntr_lng+" avg_niveau: "+avg_niveau    );
+
+
+                            cntr = { parclIdx: p, latlng: { lat: cntr_lat, lng: cntr_lng }, niveau: avg_niveau };
+                            if (glob_centr_lat == 0) {
+                                glob_centr_lat = cntr_lat;
+                                glob_centr_lng = cntr_lng;
+                            }
+                        }
+                        sem.push(cntr);
+                    }
+                    camp.push(sem);
+                }
+                campIdx_semIdx_parclIdx_cntr.push(camp);
+            }
+            //return campIdx_semIdx_parclIdx_cntr;
+        }
+
+        // CONSOLE PRINT TO DEBUG TO BE REMOVED
+        // for (var c = 0; c < campIdx_semIdx_parclIdx_cntr.length; c++) {
+        //     for (var s = 0; s < campIdx_semIdx_parclIdx_cntr[c].length; s++) {
+        //         for (var p = 0; p < campIdx_semIdx_parclIdx_cntr[c][s].length; p++) {
+        //             var cntr = campIdx_semIdx_parclIdx_cntr[c][s][p];
+        //             console.log("c: " + c + " s: " + s + " p:" + cntr.parclIdx + " niv: " + cntr.niveau);
+        //         }
+        //     }
+        // }
+
+        // selecting the  campagne  (select object)
+
+        var selectCampagneElmt = document.getElementById("selectCampagneId");
+        for (var i = 0; i < campagneYears.length; i += 1) {
+            var option = document.createElement('option');
+            option.setAttribute('value', campagneYears[i]);
+            option.innerHTML = campagneYears[i];
+            selectCampagneElmt.appendChild(option);
+        }
+
+        console.log("selectCampagneElmt.selectedIndex: " + selectCampagneElmt.selectedIndex);
+
+        var selectedCampIdx = selectCampagneElmt.selectedIndex;
+
+        selectCampagneElmt.oninput = function () {
+            selectedCampIdx = selectCampagneElmt.selectedIndex;
+            selectedParcelCentres = campIdx_semIdx_parclIdx_cntr[selectedCampIdx][selectedWeekIdx];
+            reInitSelectedParcelMarkers();
+
+            reInitNbObs();
+            config_pie_chart.data.datasets[0].data = selectedPieData;
+            window.pie_chart_growth.update();
+
+            reinitWeekDatesGrowthIndicators();
+            config_line_chart_growth_indicators.data.datasets[0].data = weekDatesGrowth; // Indice croiss.
+            config_line_chart_growth_indicators.data.datasets[1].data = weekDatesPrctFullGrowth; // % pleine
+            config_line_chart_growth_indicators.data.datasets[2].data = weekDatesPrctSlowGrowth; // % ralentie 
+            config_line_chart_growth_indicators.data.datasets[3].data = weekDatesPrctStoppedGrowth; // % arrétée
+            window.line_chart_growth.update();
+
+            reInitHydricConstraint();
+            config_line_chart_hydric_constraint_indicator.data.datasets[0].data = weekDatesHydricConstraint;
+            window.line_chart_hydric_constraint.update();
+        }
+
+
+        
+
+        // Selecting week ( Map )
+
+        var selectedWeekIdx = 0;
+        // createScrollableMenu(weekIds.length);
+        // updateSelectedWeekIdx(document.getElementById("menu3_button_" + selectedWeekIdx));
+        // console.log(" selectedWeekIdx: " + selectedWeekIdx);
+
+        function createScrollableMenu(nbWeeks) {
+            var menu = document.getElementById("menu3");
+
+            for (var i = 0; i < nbWeeks; i++) {
+                var button = document.createElement("button");
+                button.setAttribute("class", "tablink");
+                button.setAttribute("id", "menu3_button_" + i);
+                button.setAttribute("onclick", "updateSelectedWeekIdx(this)");
+
+
+                button.innerHTML += "Sem " + (i+1);
+                menu.appendChild(button);
+            }
+
+
+        }
+
+        
+
+        function updateSelectedWeekIdx(elmt){
+
+            console.log(" prev selected week idx "+selectedWeekIdx);
+
+            selectedWeekIdx =elmt.id.split("_")[2];
+
+            console.log(" new selected new week idx "+selectedWeekIdx);
+
+            changeBackgroundColor(elmt);
+
+            
+            selectedParcelCentres = campIdx_semIdx_parclIdx_cntr[selectedCampIdx][selectedWeekIdx];
+            reInitSelectedParcelMarkers();
+
+            reInitNbObs();
+            config_pie_chart.data.datasets[0].data = selectedPieData;
+            window.pie_chart_growth.update();
+
+            reinitWeekDatesGrowthIndicators();
+            config_line_chart_growth_indicators.data.datasets[0].data = weekDatesGrowth; // Indice croiss.
+            config_line_chart_growth_indicators.data.datasets[1].data = weekDatesPrctFullGrowth; // % pleine
+            config_line_chart_growth_indicators.data.datasets[2].data = weekDatesPrctSlowGrowth; // % ralentie 
+            config_line_chart_growth_indicators.data.datasets[3].data = weekDatesPrctStoppedGrowth; // % arrétée
+            window.line_chart_growth.update();
+
+            reInitHydricConstraint();
+            config_line_chart_hydric_constraint_indicator.data.datasets[0].data = weekDatesHydricConstraint;
+            window.line_chart_hydric_constraint.update();
+
+
+        }
+
+        function changeBackgroundColor(elmt) {
+            tablinks = document.getElementsByClassName("tablink");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].style.backgroundColor = "";
+            }
+            elmt.style.backgroundColor = "#777";
+        }
+
+        function scrollToRight() {
+            // var myElement = document.getElementById('menu3_button20');
+            // document.getElementById('menu3').scrollLeft = myElement.offsetTop;
+
+            console.log(" before scrollToRight menu3.scrollLeft: " + document.getElementById('menu3').scrollLeft);
+
+            var current_pos = document.getElementById('menu3').scrollLeft;
+            document.getElementById('menu3').scrollLeft = current_pos - 200;
+
+            console.log(" after scrollToRight menu3.scrollLeft: " + document.getElementById('menu3').scrollLeft);
+
+        }
+
+        function scrollToLeft() {
+
+            // console.log(" before scrollToRight menu3.scrollLeft: "+ document.getElementById('menu3').scrollLeft);
+
+            var current_pos = document.getElementById('menu3').scrollLeft;
+            document.getElementById('menu3').scrollLeft = current_pos + 200;
+
+            // console.log(" after scrollToLeft menu3.scrollLeft: "+ document.getElementById('menu3').scrollLeft);
+
+        }
+
+
+        
+
+
+
+        
+
+
+
+        // Selecting the parcel ( Map )
+
+        var mymap = L.map('mapid').setView([glob_centr_lat, glob_centr_lng], 12);
+        L.tileLayer(
+            'https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw'
+            , {
+                maxZoom: 18,
+                attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, ' +
+                    '<a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, ' +
+                    'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+                id: 'mapbox/satellite-v9'
+            }).addTo(mymap);
+
+
+
+        var selectedParclIdx = 0;
+        var selectedCntrLatLng = { lat: glob_centr_lng, lng: glob_centr_lng };
+
+         
+        
+        var selectedParcelCentres = campIdx_semIdx_parclIdx_cntr[selectedCampIdx][selectedWeekIdx];
+        var selectedParcelMarkers = [];
+        var prevYearSelectedParcelMarkers = [];
+        
+        reInitSelectedParcelMarkers();
+
+        function reInitSelectedParcelMarkers() {
+            if ( selectedParcelMarkers !== undefined && selectedParcelMarkers.length>0) {
+                var marker;
+                for (marker of selectedParcelMarkers) {
+                    mymap.removeLayer(marker);
+                }
+                selectedParcelMarkers = [];
+            }
+
+            if (prevYearSelectedParcelMarkers !=undefined && prevYearSelectedParcelMarkers.length>0) {
+                var marker;
+                for (marker of prevYearSelectedParcelMarkers) {
+                    mymap.removeLayer(marker);
+                }
+                prevYearSelectedParcelMarkers = [];
+            }
+
+            var cntr;
+            for (cntr of selectedParcelCentres) {
+                var marker = createMarker(cntr);
+                selectedParcelMarkers.push(marker);
+            }
+        }
+ 
+        var bordered_pin =  false;  
+
+        function showPrevYearSelectedParcelMarkers(){
+            
+            if (selectedParcelMarkers.length>0) {
+                var marker;
+                for (marker of selectedParcelMarkers) {
+                    mymap.removeLayer(marker);
+                }
+                selectedParcelMarkers = [];
+            }
+
+            if(selectedCampIdx<=0)
+                return;
+
+            if (prevYearSelectedParcelMarkers.length>0) {
+                var marker;
+                for (marker of prevYearSelectedParcelMarkers) {
+                    mymap.removeLayer(marker);
+                }
+                prevYearSelectedParcelMarkers = [];
+            }
+
+            bordered_pin =true;
+            selectedCampIdx = selectedCampIdx-1;
+            selectedParcelCentres = campIdx_semIdx_parclIdx_cntr[selectedCampIdx][selectedWeekIdx];
+            
+            reInitSelectedParcelMarkers();
+            
+            selectedCampIdx = selectedCampIdx+1;
+            selectedParcelCentres = campIdx_semIdx_parclIdx_cntr[selectedCampIdx][selectedWeekIdx];
+            bordered_pin =false;
+
+            return;
+
+
+            // bordered_pin =true;
+            // selectedCampIdx = selectedCampIdx-1;
+            // selectedParcelCentres = campIdx_semIdx_parclIdx_cntr[selectedCampIdx][selectedWeekIdx];
+
+            // for (cntr of selectedParcelCentres) {
+
+            //     cntr.latlng.lat = cntr.latlng.lat +0.05;
+            //     cntr.latlng.lng = cntr.latlng.lng +0.05;
+
+            //     var marker = createMarker(cntr);
+            //     prevYearSelectedParcelMarkers.push(marker);
+            // }
+
+            // selectedCampIdx = selectedCampIdx+1;
+            // selectedParcelCentres = campIdx_semIdx_parclIdx_cntr[selectedCampIdx][selectedWeekIdx];
+            // bordered_pin =false;
+
+        }
+
+
+
+        function createMarker(cntr) {
+
+            // cntr = { parclIdx: p, latlng: { lat: cntr_lat, lng: cntr_lng }, niveau: avg_niveau  };
+            
+            console.log(" create cntr latlng: " + cntr.latlng.lat + " " + cntr.latlng.lng + " niveau: " + cntr.niveau);
+
+            // var color = niveauToColor(cntr.niveau);
+            var color = nivToGreenColor(cntr.niveau);
+
+            
+            console.log("bordered_pin : "+bordered_pin);
+
+            if (bordered_pin === true){
+
+                console.log(" color pin border : ");
+
+                color = color+"_bordered"
+            }
+
+            console.log("pin color : "+color);
+
+            var tmp_icon = L.icon({
+                iconUrl: 'images/my_' + color + '_pin.png',
+                iconSize: [22, 35],
+                // iconAnchor: [22, 94],
+                // popupAnchor: [-3, -76],
+                iconAnchor: [0, 0],
+                popupAnchor: [0, 0],
+
+            });
+
+
+            var cntr_marker = L.marker(cntr.latlng, { icon: tmp_icon }).addTo(mymap)
+                .bindPopup("<b>Parcelle Idx</b>: " + cntr.parclIdx
+                    + "<br><b>latlng: </b>: " + cntr.latlng.lat + " " + cntr.latlng.lng
+                    + "<br><b>croissance </b>: " + niveauTodesc(cntr.niveau)
+                    + "<br><b> niv_moy </b>: " + cntr.niveau
+                );
+
+            // TODO replace the function to update plots in right side bar
+
+            
+
+            cntr_marker.on("click", function (e) {
+                console.log("click on cntr of Parcelle Idx" + cntr.parclIdx);
+                selectedCntrLatLng = cntr.latlng;
+                selectedParclIdx = cntr.parclIdx;
+                mymap.setView([selectedCntrLatLng.lat, selectedCntrLatLng.lng], 12);
+
+                reInitNbObs();
+                config_pie_chart.data.datasets[0].data = selectedPieData;
+                window.pie_chart_growth.update();
+
+                reinitWeekDatesGrowthIndicators();
+                config_line_chart_growth_indicators.data.datasets[0].data = weekDatesGrowth; // Indice croiss.
+                config_line_chart_growth_indicators.data.datasets[1].data = weekDatesPrctFullGrowth; // % pleine
+                config_line_chart_growth_indicators.data.datasets[2].data = weekDatesPrctSlowGrowth; // % ralentie 
+                config_line_chart_growth_indicators.data.datasets[3].data = weekDatesPrctStoppedGrowth; // % arrétée
+                window.line_chart_growth.update();
+
+                reInitHydricConstraint();
+                config_line_chart_hydric_constraint_indicator.data.datasets[0].data = weekDatesHydricConstraint;
+                window.line_chart_hydric_constraint.update();
+
+
+            });
+
+            return cntr_marker;
+        }
+
+
+
+
+        function niveauTodesc(niv) {
+            if (niv <= 0 && niv < 0.5) {
+                return 'arrêtée';
+            }
+            if (niv >= 0.5 && niv < 1.5) {
+                return 'ralentie';
+            }
+            if (niv >= 1.5 && niv <= 2) {
+                return 'pleine';
+            }
+            return 'inconnue';
+        }
+
+        function niveauToColor(niv) {
+            if (niv <= 0 && niv < 0.5) {
+                return 'yellow';
+            }
+            if (niv >= 0.5 && niv < 1.5) {
+                return 'green';
+            }
+            if (niv >= 1.5 && niv <= 2) {
+                return 'blue';
+            }
+            return 'black';
+
+        }
+
+        function nivToGreenColor(niv) {
+            avgGrowth = niv / 3.0;
+
+            if (avgGrowth <= 0.125) {
+                return 'green_0';
+            }
+            if (avgGrowth <= 0.375) {
+                return 'green_25';
+            }
+            if (avgGrowth <= 0.625) {
+                return 'green_50';
+            }
+            if (avgGrowth <= 0.875) {
+                return 'green_75';
+            }
+            if (avgGrowth <= 1) {
+                return 'green_100';
+            }
+            return 'gray';
+
+        }
+
+
+
+
+        // PIE CHART APEX GROWTH
+
+        var nbObsSelectedParcel = 1;
+        var nbObsNiv0 = 0;
+        var nbObsNiv1 = 0;
+        var nbObsNiv2 = 0;
+        var selectedPieData = [];
+
+        reInitNbObs();
+
+        function reInitNbObs() {
+            selectedObs = campIdx_semIdx_parclIdx_obsIdx[selectedCampIdx][selectedWeekIdx][selectedParclIdx];
+            nbObsSelectedParcel = selectedObs.length;
+            nbObsNiv0 = 0;
+            nbObsNiv1 = 0;
+            nbObsNiv2 = 0;
+            for (obs of selectedObs) {
+                console.log("obs: " + obs.niveau);
+                if (obs.niveau == 0) {
+                    nbObsNiv0++;
+                }
+                if (obs.niveau == 1) {
+                    nbObsNiv1++;
+                }
+                if (obs.niveau == 2) {
+                    nbObsNiv2++;
+                }
+            }
+
+            selectedPieData =
+                [
+                    percentOf(nbObsNiv2),
+                    percentOf(nbObsNiv1),
+                    percentOf(nbObsNiv0)
+                ]
+
+            console.log("nbObsSelectedParcel: " + nbObsSelectedParcel + "  nbObsNiv0: " + nbObsNiv0 + "  nbObsNiv1: " + nbObsNiv1 + "  nbObsNiv2: " + nbObsNiv2);
+
+        }
+
+        function percentOf(nbObsNiv) {
+            return Math.round((nbObsNiv / nbObsSelectedParcel) * 100);
+        };
+
+
+        var config_pie_chart = {
+            type: 'pie',
+            data: {
+                labels: ["% Pleine croissance", "% Croissance ralentie", "% Croissance arrétée"],
+                datasets: [{
+                    data: selectedPieData,
+                    label: "Indices de croissance",
+                    backgroundColor: [
+                        '#2C6109',
+                        '#6E9624',
+                        '#C5DC68'
+                    ],
+                    borderColor: [
+                        'rgba(255, 255, 255, 1)',
+                        'rgba(255, 255, 255, 1)',
+                        'rgba(255, 255, 255, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+
+            options: {
+                animation: {
+                    duration: 0
+                },
+                responsive: true,
+                maintainAspectRatio: false,
+                legend: {
+                    position: 'right',
+                    onClick: (e) => e.stopPropagation()
+                }
+            }
+        };
+
+
+
+        // LINE CHART TIME EVOLUTION OF GROWTH INDICATORS
+
+        var weekDatesGrowth = [];
+        var weekDatesPrctFullGrowth = [];
+        var weekDatesPrctSlowGrowth = [];
+        var weekDatesPrctStoppedGrowth = [];
+        reinitWeekDatesGrowthIndicators();
+
+        function reinitWeekDatesGrowthIndicators() {
+
+            weekDatesGrowth = [];
+            weekDatesPrctFullGrowth = [];
+            weekDatesPrctSlowGrowth = [];
+            weekDatesPrctStoppedGrowth = [];
+
+            for (var idxWeekDate = 0; idxWeekDate < weekDates.length; idxWeekDate++) {
+                var weekDateObservations = campIdx_semIdx_parclIdx_obsIdx[selectedCampIdx][idxWeekDate][selectedParclIdx];
+                var nbObsNiv0 = 0;
+                var nbObsNiv1 = 0;
+                var nbObsNiv2 = 0;
+                for (var ob of weekDateObservations) {
+                    console.log("ob: " + ob.niveau);
+                    if (ob.niveau == 0) {
+                        nbObsNiv0++;
+                    }
+                    if (ob.niveau == 1) {
+                        nbObsNiv1++;
+                    }
+                    if (ob.niveau == 2) {
+                        nbObsNiv2++;
+                    }
+                }
+                // console.log(" selectedCampIdx: " + selectedCampIdx+" selectedWeekIdx: " + selectedWeekIdx);
+                // console.log("   "+weekDates[idxWeekDate]+" nbObsNiv0: " + nbObsNiv0+" nbObsNiv1: " + nbObsNiv1+" nbObsNiv2: " + nbObsNiv2);
+                weekDatesPrctFullGrowth.push(Math.round((nbObsNiv2 / weekDateObservations.length) * 100));
+                weekDatesPrctSlowGrowth.push(Math.round((nbObsNiv1 / weekDateObservations.length) * 100));
+                weekDatesPrctStoppedGrowth.push(Math.round((nbObsNiv0 / weekDateObservations.length) * 100));
+                weekDatesGrowth.push(Math.round(((nbObsNiv2 + 0.5 * nbObsNiv1) / weekDateObservations.length)));
+
+            }
+
+            for (var idxWeekDate = 0; idxWeekDate < weekDates.length; idxWeekDate++) {
+                console.log("   " + weekDates[idxWeekDate]
+                    + " prctObsNiv0: " + weekDatesPrctFullGrowth[idxWeekDate]
+                    + " prctObsNiv1: " + weekDatesPrctSlowGrowth[idxWeekDate]
+                    + " prctObsNiv2: " + weekDatesPrctStoppedGrowth[idxWeekDate]
+                    + " growthIndic: " + weekDatesGrowth[idxWeekDate]
+                );
+            }
+
+        }
+
+
+
+        var config_line_chart_growth_indicators = {
+            type: 'line',
+            data: {
+                labels: weekDates,
+                datasets: [{
+                    label: 'Indice croiss.',
+                    yAxisID: 'A',
+                    fill: false,
+                    lineTension: 0.1,
+                    backgroundColor: 'rgba(242, 142, 146, 0.2)',
+                    borderColor: 'rgb(242, 142, 146)',
+                    borderCapStyle: 'square',
+                    borderDash: [], // try [5, 15] for instance
+                    borderDashOffset: 0.0,
+                    borderJoinStyle: 'miter',
+                    pointBorderColor: "black",
+                    pointBackgroundColor: "white",
+                    pointBorderWidth: 1,
+                    pointHoverRadius: 8,
+                    pointHoverBackgroundColor: 'rgb(242, 142, 146)',
+                    pointHoverBorderColor: "white",
+                    pointHoverBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHitRadius: 10,
+                    data: weekDatesGrowth
+                },
+                {
+                    label: '% pleine',
+                    yAxisID: 'B',
+                    fill: true,
+                    hidden: true,
+                    lineTension: 0.1,
+                    backgroundColor: "rgba(247, 201, 161, 0.2)",
+                    borderColor: 'rgb(247, 201, 161)', // The main line color
+                    borderCapStyle: 'square',
+                    borderDash: [5, 5], // try [5, 15] for instance
+                    borderDashOffset: 0.0,
+                    borderJoinStyle: 'miter',
+                    pointBorderColor: "black",
+                    pointBackgroundColor: "white",
+                    pointBorderWidth: 1,
+                    pointHoverRadius: 8,
+                    pointHoverBackgroundColor: 'rgb(247, 201, 161)',
+                    pointHoverBorderColor: "white",
+                    pointHoverBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHitRadius: 10,
+                    data: weekDatesPrctFullGrowth
+                },
+                {
+                    label: '% ralentie',
+                    yAxisID: 'B',
+                    fill: true,
+                    hidden: false,
+                    lineTension: 0.1,
+                    backgroundColor: 'rgba(144, 190, 184, 0.2)',
+                    borderColor: 'rgb(144, 190, 184)', // The main line color
+                    borderCapStyle: 'square',
+                    borderDash: [5, 5], // try [5, 15] for instance
+                    borderDashOffset: 0.0,
+                    borderJoinStyle: 'miter',
+                    pointBorderColor: "black",
+                    pointBackgroundColor: "white",
+                    pointBorderWidth: 1,
+                    pointHoverRadius: 8,
+                    pointHoverBackgroundColor: 'rgb(144, 190, 184)',
+                    pointHoverBorderColor: "white",
+                    pointHoverBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHitRadius: 10,
+                    data: weekDatesPrctSlowGrowth
+                },
+                {
+                    label: '% arrétée',
+                    yAxisID: 'B',
+                    fill: true,
+                    hidden: true,
+                    lineTension: 0.1,
+                    backgroundColor: 'rgba(105, 134, 143, 0.2)',
+                    borderColor: 'rgb(105, 134, 143)', // The main line color
+                    borderCapStyle: 'square',
+                    borderDash: [5, 5], // try [5, 15] for instance
+                    borderDashOffset: 0.0,
+                    borderJoinStyle: 'miter',
+                    pointBorderColor: "black",
+                    pointBackgroundColor: "white",
+                    pointBorderWidth: 1,
+                    pointHoverRadius: 8,
+                    pointHoverBackgroundColor: 'rgb(105, 134, 143)',
+                    pointHoverBorderColor: "white",
+                    pointHoverBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHitRadius: 10,
+                    data: weekDatesPrctStoppedGrowth
+                }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                legend: {
+                    position: 'bottom'
+                },
+                scales: {
+                    xAxes: [{
+                        ticks: {
+                            suggestedMax: 5
+                        }
+                    }],
+                    yAxes: [{
+                        id: 'A',
+                        type: 'linear',
+                        position: 'left',
+                        scaleLabel: {
+                            display: true,
+                            labelString: 'Indice croiss.',
+                            fontSize: 15
+                        },
+                        ticks: {
+                            max: 1,
+                            min: 0
+                            , stepSize: 0.25
+                        }
+                    }, {
+                        id: 'B',
+                        type: 'linear',
+                        position: 'right',
+                        scaleLabel: {
+                            display: true,
+                            labelString: '% Apex',
+                            fontSize: 15
+                        },
+                        ticks: {
+                            max: 100,
+                            min: 0
+                            , stepSize: 25
+                        }
+                    }]
+                }
+            }
+        };
+
+
+
+        // GROWTH DYNAMIC = GROWTH EVOLUTION FROM PREV WEEK TO SELECTED WEEK
+
+        reInitGrowthDynamic();
+        function reInitGrowthDynamic() {
+
+            var growthDynamicMsg = "Dynamique de croissance: <br>";
+
+            if (selectedWeekIdx == 0) {
+                growthDynamicStartDate = weekDates[selectedWeekIdx];
+                growthDynamicEndDate = weekDates[selectedWeekIdx];
+                growthDynamicMsg += " Pas de données semaine précédente";
+
+            } else {
+                if (selectedWeekIdx > 0) {
+                    growthDynamicStartDate = weekDates[selectedWeekIdx - 1];
+                    growthDynamicEndDate = weekDates[selectedWeekIdx];
+
+                    if (weekDatesGrowth[selectedWeekIdx] == -1 || weekDatesGrowth[selectedWeekIdx - 1] == -1) {
+                        if (weekDatesGrowth[selectedWeekIdx - 1] == -1) {
+                            growthDynamicMsg += "Pas de données semaine précédente";
+                        }
+                        if (weekDatesGrowth[selectedWeekIdx] == -1) {
+                            growthDynamicMsg += "Pas de données semaine courante";
+                        }
+                    } else {
+
+                        growthDynamicMsg += "du " + weekDates[selectedWeekIdx - 1]
+                            + " au " + weekDates[selectedWeekIdx];
+
+                        var diffGrowthIndic = weekDatesGrowth[selectedWeekIdx] - weekDatesGrowth[selectedWeekIdx - 1];
+                        if (-0.2 <= diffGrowthIndic && diffGrowthIndic <= 0.2) {
+                            growthDynamicMsg += " stable";
+                        }
+                        if (diffGrowthIndic < -0.2) {
+                            growthDynamicMsg += " en baisse";
+                        }
+                        if (0.2 < diffGrowthIndic) {
+                            growthDynamicMsg += " en hausse";
+                        }
+
+                    }
+                }
+            }
+
+            document.getElementById("growthDynamicMsg").innerHTML = growthDynamicMsg;
+        }
+
+
+
+        // HYDRIC CONSTRAINT
+
+        var weekDatesHydricConstraint = [];
+        reInitHydricConstraint();
+
+        function reInitHydricConstraint() {
+            weekDatesHydricConstraint = [];
+
+            for (var idxWeekDate = 0; idxWeekDate < weekDates.length; idxWeekDate++) {
+
+                var hydricConstraint = 3;
+                if (weekDatesGrowth[idxWeekDate] >= 0.75) {
+                    hydricConstraint = 0;
+                } else {
+                    if (weekDatesPrctFullGrowth[idxWeekDate] >= 5) {
+                        hydricConstraint = 1;
+                    } else {
+                        if (weekDatesPrctSlowGrowth[idxWeekDate] <= 90) {
+                            hydricConstraint = 2;
+                        }
+                    }
+                }
+                weekDatesHydricConstraint.push(hydricConstraint);
+            }
+        }
+
+
+
+        var config_line_chart_hydric_constraint_indicator = {
+            type: 'line',
+            data: {
+                labels: weekDates,
+                datasets: [{
+                    label: 'Niveau contrainte hydrique',
+                    yAxisID: 'CH',
+                    fill: true,
+                    steppedLine: "middle",
+                    lineTension: 0.1,
+                    backgroundColor: 'rgba(151, 162, 191, 0.2)',
+                    borderColor: 'rgb(151, 162, 191)',
+                    borderCapStyle: 'square',
+                    borderDash: [], // try [5, 15] for instance
+                    borderDashOffset: 0.0,
+                    borderJoinStyle: 'miter',
+                    pointBorderColor: "black",
+                    pointBackgroundColor: "white",
+                    pointBorderWidth: 1,
+                    pointHoverRadius: 8,
+                    pointHoverBackgroundColor: 'rgb(151, 162, 191)',
+                    pointHoverBorderColor: "white",
+                    pointHoverBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHitRadius: 10,
+                    data: weekDatesHydricConstraint
+                }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                legend: {
+                    position: 'bottom'
+                },
+                scales: {
+                    xAxes: [{
+                        ticks: {
+                            suggestedMax: 5
+                        }
+                    }],
+                    yAxes: [{
+                        id: 'CH',
+                        type: 'linear',
+                        position: 'left',
+                        /*scaleLabel: {
+                          display: true,
+                          labelString: 'Classes',
+                          fontSize: 15
+                        },*/
+                        ticks: {
+                            max: 3,
+                            min: 0,
+                            stepSize: 1,
+                            callback: function (label, index, labels) {
+                                switch (label) {
+                                    case 0:
+                                        return 'Absente';
+                                    case 1:
+                                        return 'Modérée';
+                                    case 2:
+                                        return 'Forte';
+                                    case 3:
+                                        return 'Sévère';
+                                }
+                            }
+                        }
+                    }]
+                }
+            }
+        };
+
+
+        window.onload = function () {
+
+            var ctx_pie_chart = document.getElementById('pie-chart_parcel-growth-indicators').getContext('2d');
+            window.pie_chart_growth = new Chart(ctx_pie_chart, config_pie_chart);
+
+            var ctx_line_chart_growth = document.getElementById('line-chart_parcel-growth-indicators_vs_time').getContext('2d');
+            window.line_chart_growth = new Chart(ctx_line_chart_growth, config_line_chart_growth_indicators);
+
+            var ctx_line_chart_hydric_constraint = document.getElementById('line-chart_parcel-hydric-constraint-indicators_vs_time').getContext('2d');
+            window.line_chart_hydric_constraint = new Chart(ctx_line_chart_hydric_constraint, config_line_chart_hydric_constraint_indicator);
+
+
+            selectedWeekIdx = 0;
+            createScrollableMenu(weekIds.length);
+            updateSelectedWeekIdx(document.getElementById("menu3_button_" + selectedWeekIdx));
+            console.log(" selectedWeekIdx: " + selectedWeekIdx);
+
+        };
+
+
+
+
+
+
+        /*
+        var myIcon = L.icon({
+            iconUrl: 'images/my_green_pin.png',
+            iconSize: [22, 35],
+            iconAnchor: [22, 94],
+            popupAnchor: [-3, -76],
+            // shadowUrl: 'my-icon-shadow.png',
+            // shadowSize: [68, 95],
+            // shadowAnchor: [22, 94]
+        });
+        L.marker([52.503997, -0.117416], { icon: myIcon }).addTo(mymap);
+        */
+
+
+
+        // TODO REMOVE LATER Display coordinates when clicking on the map
+        /*
+                function onMapClick(e) {
+                    L.popup().setLatLng(e.latlng)
+                        .setContent("You clicked the map at " + e.latlng.toString())
+                        .openOn(mymap);
+                }
+                mymap.on('click', onMapClick);
+        */
+
+      // Select Observations  displayed on map
+
+
+        /*       var sortedArrayOfArrayOfObservations =
+                    [ // campIdx :0
+                        [ // semIdx : 0
+                            // obsIdx :0
+                            { id: 1, parcelle: 1, latlng: { lat: 52.506335, lng: -0.089603 }, croissance: "Normale", niveau: 1, date: "2019-03-01" }
+                            , { id: 1, parcelle: 1, latlng: { lat: 52.504924, lng: -0.089465 }, croissance: "Normale", niveau: 1, date: "2019-03-01" }
+                            , { id: 1, parcelle: 1, latlng: { lat: 52.505355, lng: -0.087627 }, croissance: "Normale", niveau: 1, date: "2019-03-01" }
+
+
+                            , { id: 2, parcelle: 2, latlng: { lat: 52.503997, lng: -0.117416 }, croissance: "Faible", niveau: 0, date: "2019-03-01" }
+                            , { id: 3, parcelle: 3, latlng: { lat: 52.496369, lng: -0.122223 }, croissance: "Forte", niveau: 2, date: "2019-03-01" }
+                            , { id: 4, parcelle: 4, latlng: { lat: 52.513191, lng: -0.103512 }, croissance: "Faible", niveau: 0, date: "2019-03-01" }
+                            , { id: 5, parcelle: 5, latlng: { lat: 52.51105, lng: -0.107718 }, croissance: "Forte", niveau: 1, date: "2019-03-01" }
+                            , { id: 6, parcelle: 6, latlng: { lat: 52.508856, lng: -0.11467 }, croissance: "Faible", niveau: 0, date: "2019-03-01" }
+                        ]
+
+                        , [
+                            { id: 1, parcelle: 1, latlng: { lat: 52.505, lng: -0.09 }, croissance: "Faible", niveau: 0, date: "2019-03-15" }
+                            , { id: 2, parcelle: 2, latlng: { lat: 52.503997, lng: -0.117416 }, croissance: "Normale", niveau: 1, date: "2019-03-15" }
+                            , { id: 3, parcelle: 3, latlng: { lat: 52.496369, lng: -0.122223 }, croissance: "Forte", niveau: 2, date: "2019-03-15" }
+                            , { id: 4, parcelle: 4, latlng: { lat: 52.513191, lng: -0.103512 }, croissance: "Normale", niveau: 1, date: "2019-03-15" }
+                            , { id: 5, parcelle: 5, latlng: { lat: 52.51105, lng: -0.107718 }, croissance: "Forte", niveau: 2, date: "2019-03-15" }
+                            , { id: 6, parcelle: 6, latlng: { lat: 52.508856, lng: -0.11467 }, croissance: "Faible", niveau: 0, date: "2019-03-15" }
+                        ]
+
+                        , [
+                            { id: 1, parcelle: 1, latlng: { lat: 52.505, lng: -0.09 }, croissance: "Faible", niveau: 0, date: "2019-04-01" }
+                            , { id: 2, parcelle: 2, latlng: { lat: 52.503997, lng: -0.117416 }, croissance: "Normale", niveau: 1, date: "2019-04-01" }
+                            , { id: 3, parcelle: 3, latlng: { lat: 52.496369, lng: -0.122223 }, croissance: "Forte", niveau: 2, date: "2019-04-01" }
+                            , { id: 4, parcelle: 4, latlng: { lat: 52.513191, lng: -0.103512 }, croissance: "Normale", niveau: 1, date: "2019-04-01" }
+                            , { id: 5, parcelle: 5, latlng: { lat: 52.51105, lng: -0.107718 }, croissance: "Forte", niveau: 2, date: "2019-04-01" }
+                            , { id: 6, parcelle: 6, latlng: { lat: 52.508856, lng: -0.11467 }, croissance: "Faible", niveau: 0, date: "2019-04-01" }
+                        ]
+
+                        , [
+                            { id: 1, parcelle: 1, latlng: { lat: 52.505, lng: -0.09 }, croissance: "Faible", niveau: 0, date: "2019-04-15" }
+                            , { id: 2, parcelle: 2, latlng: { lat: 52.503997, lng: -0.117416 }, croissance: "Normale", niveau: 1, date: "2019-04-15" }
+                            , { id: 3, parcelle: 3, latlng: { lat: 52.496369, lng: -0.122223 }, croissance: "Forte", niveau: 2, date: "2019-04-15" }
+                            , { id: 4, parcelle: 4, latlng: { lat: 52.513191, lng: -0.103512 }, croissance: "Normale", niveau: 1, date: "2019-04-15" }
+                            , { id: 5, parcelle: 5, latlng: { lat: 52.51105, lng: -0.107718 }, croissance: "Forte", niveau: 2, date: "2019-04-15" }
+                            , { id: 6, parcelle: 6, latlng: { lat: 52.508856, lng: -0.11467 }, croissance: "Faible", niveau: 0, date: "2019-04-15" }
+                        ]
+
+                    ];
+         */
+
+
+    </script>
+
+
+
+</body>
+
+
+</html>

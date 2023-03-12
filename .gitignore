@@ -1,0 +1,7 @@
+node_modules
+database
+client/node_modules
+Vincent-Dev-Info
+mapclient
+.DS_Store
+.env

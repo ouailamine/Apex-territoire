@@ -1,0 +1,83 @@
+
+html {
+    font-family: "Raleway", sans-serif
+}
+
+body {
+    font-family: "Raleway", sans-serif
+}
+
+h1 {
+    font-family: "Raleway", sans-serif
+}
+
+div.indicators {
+    width: 90%;
+    position: relative;
+    left: 600px;
+    bottom: 400px;
+    border: 3px solid #73AD21;
+}
+
+
+.slidecontainer {
+    width: 100%;
+}
+  
+
+.slider {
+    /* -webkit-appearance: media-slider; */
+    width: 100%;
+    height: 2px;
+    border-radius: 5px;
+    background: #d3d3d3;
+    outline: none;
+    opacity: 0.7; 
+    transition: opacity .2s;
+    
+}
+  
+.slider:hover {
+    opacity: 1;
+}
+
+
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 23px;
+    height: 24px;
+    border: 0;
+    background: url('images/green_leaf.svg');
+    cursor: pointer;
+  }
+  
+.slider::-moz-range-thumb {
+    width: 23px;
+    height: 24px;
+    border: 0;
+    background: url('images/green_leaf.svg');
+    cursor: pointer;
+}
+
+
+
+.ticks {
+  display: flex;
+  justify-content: space-between;
+  
+  /* We need left & right padding that's half the width of the range thumb, so all ticks align with the center of the thumb */
+  padding: 1 1*2;
+}
+.tick {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  width: 1px;
+  background: gray;
+  
+  /* Cap the height of the tick & push text down, so the tick renders as a little line and the text doesn't overlap the line. Also add margin, so the container expands enough that the next element you'll add won't overlap the ticks. */
+  height: 1;
+  line-height: 1 1*5;
+  margin-bottom: 1*2;
+}
